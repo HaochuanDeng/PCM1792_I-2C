@@ -1,0 +1,237 @@
+C51 COMPILER V9.59.0.0   IIC                                                               10/04/2020 15:10:49 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE IIC
+OBJECT MODULE PLACED IN .\Objects\IIC.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE IIC\IIC.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\PCM1792;.\UART;.\IIC;.\DELA
+                    -Y) DEBUG OBJECTEXTEND PRINT(.\Listings\IIC.lst) TABS(2) OBJECT(.\Objects\IIC.obj)
+
+line level    source
+
+   1          #include "IIC.h"
+   2          
+   3          /*******************/
+   4          //主设备: 89C52RC
+   5          //从设备: PCM1792A
+   6          /*******************/
+   7          
+   8          //I^2C总线,总线初始化
+   9          //结果:SDA-->1
+  10          //     SCL-->1
+  11          //PS:代码未改动(郭天祥_P182)
+  12          void IIC_BUS_Init(void)
+  13          {
+  14   1        SCL=1;   //SCL拉高
+  15   1        delay(); //延时
+  16   1        SDA=1;   //SDA拉高
+  17   1        delay();
+  18   1      }
+  19          
+  20          //I^2C总线,发送启动信号
+  21          //结果:SDA-->0
+  22          //     SCL-->1
+  23          //PS:代码未改动(郭天祥_P182)
+  24          void IIC_BUS_Start(void)
+  25          {
+  26   1        SDA=1;  //SDA拉高
+  27   1        delay();//延时
+  28   1        SCL=1;  //SCL拉高
+  29   1        delay();//延时
+  30   1        SDA=0;  //SDA拉低
+  31   1        delay();//延时
+  32   1      }
+  33          
+  34          //I^2C总线,发送停止信号
+  35          //结果:SDA-->1
+  36          //     SCL-->1
+  37          //PS:代码未改动(郭天祥_P183)
+  38          void IIC_BUS_Stop(void)
+  39          {
+  40   1        SDA=0;  //SDA拉低
+  41   1        delay();//延时
+  42   1        SCL=1;  //SDL拉高
+  43   1        delay();//延时
+  44   1        SDA=1;  //SDA拉高
+  45   1        delay();//延时
+  46   1      }
+  47          
+  48          //I^2C总线,主设备等待从设备应答
+  49          //结果:SDA-->1，从设备未应答
+  50          //     SDA-->0，从设备应答
+  51          //     SCL-->0
+  52          //PS:程序开始没有释放SDA,但是在其前面调用“主向从写字节”最后会释放SDA,代码未改动(郭天祥_P182)
+  53          void IIC_BUS_MasterWaitResp(void)
+  54          {
+C51 COMPILER V9.59.0.0   IIC                                                               10/04/2020 15:10:49 PAGE 2   
+
+  55   1        uchar i=0;
+  56   1        
+  57   1      //  SDA=1;  //释放SDA
+  58   1        SCL=1;  //SCL拉高
+  59   1        delay();//延时
+  60   1        while((SDA==1) && (i<255))
+  61   1          i++;  //等待从设备将SDA拉低
+  62   1        SCL=0;  //主设备将SCL拉低
+  63   1        delay();//延时
+  64   1      }
+  65          
+  66          //I^2C总线，主设备向从设备应答
+  67          //结果:SDA-->0
+  68          //     SCL-->0
+  69          //PS:程序结束没有释放SDA,之后调用“主向从读”的开始会释放SDA,代码未改动(https://blog.csdn.net/xwwwj/articl
+             -e/details/105333223?utm_medium=distribute.pc_relevant.none-task-blog-BlogCommendFromMachineLearnPai2-5.channel_param&dep
+             -th_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromMachineLearnPai2-5.channel_param)
+  70          void IIC_BUS_MasterRespToSlave(void)
+  71          {
+  72   1        SCL=0;  //SCL拉低
+  73   1        SDA=0;  //SDA拉低
+  74   1        delay();//延时
+  75   1        SCL=1;  //SCL拉高
+  76   1        delay();//延时
+  77   1        SCL=0;  //SCL拉低
+  78   1      //  SDA=1;  //释放SDA
+  79   1      }
+  80          
+  81          //I^2C总线，主设备不向从设备应答
+  82          //结果:SDA-->1
+  83          //     SCL-->0
+  84          //PS:代码未改动(https://blog.csdn.net/xwwwj/article/details/105333223?utm_medium=distribute.pc_relevant.no
+             -ne-task-blog-BlogCommendFromMachineLearnPai2-5.channel_param&depth_1-utm_source=distribute.pc_relevant.none-task-blog-Bl
+             -ogCommendFromMachineLearnPai2-5.channel_param)
+  85          void IIC_BUS_MasterNotResp(void)
+  86          {
+  87   1        SCL=0;  //SCL拉低
+  88   1        SDA=1;  //SDA拉高
+  89   1        delay();//延时
+  90   1        SCL=1;  //SCL拉高
+  91   1        delay();//延时
+  92   1        SCL=0;  //SCL拉低
+  93   1      }
+  94          
+  95          //I^2C总线，主设备向从设备写一个字节
+  96          //结果:SDA-->1
+  97          //     SCL-->0
+  98          //PS:代码未改动(郭天祥_P183)
+  99          void IIC_BUS_MasterWriteByte(uchar byte)
+ 100          {
+ 101   1        uchar i,temp=byte;
+ 102   1        
+ 103   1        for(i=0; i<8; i++)
+ 104   1        {
+ 105   2          temp=temp<<1;//待发送字节最高位移入CY位,先发送最高位
+ 106   2          SCL=0;       //SCL拉低
+ 107   2          delay();     //延时
+ 108   2          SDA=CY;      //SDA送出CY
+ 109   2          delay();     //延时
+ 110   2          SCL=1;       //SCL拉高
+ 111   2          delay();     //延时
+ 112   2        }
+C51 COMPILER V9.59.0.0   IIC                                                               10/04/2020 15:10:49 PAGE 3   
+
+ 113   1        SCL=0;         //SCL拉低
+ 114   1        delay();       //延时
+ 115   1        SDA=1;         //释放SDA
+ 116   1        delay();       //延时
+ 117   1      }
+ 118          
+ 119          //I^2C总线，主设备向从设备读一个字节
+ 120          //结果:SDA-->X
+ 121          //     SCL-->0
+ 122          //PS:代码未改动(郭天祥_P184)
+ 123          uchar IIC_BUS_MasterReadByte(void)
+ 124          {
+ 125   1        uchar i,k=0x00;
+ 126   1        
+ 127   1        SCL=0;  //SCL拉低
+ 128   1        delay();//延时
+ 129   1        SDA=1;  //释放SDA
+ 130   1        for(i=0; i<8; i++)
+ 131   1        {
+ 132   2          SCL=1;  //SCL拉高
+ 133   2          delay();//延时
+ 134   2          k=(k<<1)|SDA;//存入获取的比特
+ 135   2          SCL=0;  //SCL拉低
+ 136   2          delay();//延时
+ 137   2        }
+ 138   1        delay();  //延时
+ 139   1        return k; //返回获取的字节
+ 140   1      }
+ 141          
+ 142          //I^2C总线，向PCM1792的一个寄存器写入16位数据，其由MSB和LSB组成。
+ 143          //调用此函数之前需要初始化I^2C总线
+ 144          //返回值 -1 失败,该寄存器无法写入或该寄存器无效
+ 145          //        0 成功
+ 146          char IIC_BUS_WrtiePCM1792Reg(uchar addr, uchar MSB, uchar LSB)
+ 147          {
+ 148   1        if((addr<0x10) || (addr>0x15))//检查寄存器写权限
+ 149   1          return WRITE_ERR;
+ 150   1        
+ 151   1        MSB &= 0x7F;                  //最高位清0
+ 152   1        IIC_BUS_Start();              //起始信号
+ 153   1        IIC_BUS_MasterWriteByte(PCM1792Addr & 0xFE);//写PCM1792的I^2C物理地址 + W位
+ 154   1        IIC_BUS_MasterWaitResp();     //等待从机应答
+ 155   1        IIC_BUS_MasterWriteByte(addr);//写入待写入的目标寄存器地址
+ 156   1        IIC_BUS_MasterWaitResp();     //等待从机应答
+ 157   1        IIC_BUS_MasterWriteByte(MSB); //写数据，高字节
+ 158   1        IIC_BUS_MasterWaitResp();     //等待从机应答
+ 159   1        IIC_BUS_MasterWriteByte(LSB); //写数据，低字节
+ 160   1        IIC_BUS_MasterWaitResp();     //等待从机应答
+ 161   1        IIC_BUS_Stop();               //停止信号
+ 162   1        delay();                      //起始信号与停止信号之间保持一定间隔
+ 163   1        return 0;
+ 164   1      }
+ 165          
+ 166          //I^2C总线，向PCM1792的一个寄存器读入16位数据，其由MSB和LSB组成。
+ 167          //调用此函数之前需要初始化I^2C总线
+ 168          //返回值 READ_ERR    失败，该寄存器无法读或该寄存器无效
+ 169          //       其他        读到的16位数据
+ 170          uint IIC_BUS_ReadPCM1792Reg(uchar addr)
+ 171          {
+ 172   1        uchar MSB,LSB;
+ 173   1        uint date=0x0000;
+ 174   1        
+C51 COMPILER V9.59.0.0   IIC                                                               10/04/2020 15:10:49 PAGE 4   
+
+ 175   1        if((addr<0x10) || (addr>0x17))//检查寄存器读权限
+ 176   1          return READ_ERR;
+ 177   1        
+ 178   1        IIC_BUS_Start();              //起始信号
+ 179   1        IIC_BUS_MasterWriteByte(PCM1792Addr & 0xFE);//写PCM1792的I^2C物理地址 + W位
+ 180   1        IIC_BUS_MasterWaitResp();     //等待从机应答
+ 181   1        IIC_BUS_MasterWriteByte(addr);//写入待读取的目标寄存器地址
+ 182   1        IIC_BUS_MasterWaitResp();     //等待从机应答
+ 183   1        IIC_BUS_Start();              //重复起始信号
+ 184   1        IIC_BUS_MasterWriteByte(PCM1792Addr | 0x01);//写PCM1792的I^2C物理地址 + R位
+ 185   1        IIC_BUS_MasterWaitResp();     //等待从机应答
+ 186   1        MSB = IIC_BUS_MasterReadByte();//读数据，高字节
+ 187   1        IIC_BUS_MasterRespToSlave();  //主设备向从设备应答
+ 188   1        LSB = IIC_BUS_MasterReadByte();//读数据，低字节
+ 189   1        IIC_BUS_MasterNotResp();      //主设备不向从设备应答
+ 190   1        IIC_BUS_Stop();               //停止信号
+ 191   1        
+ 192   1        date = (((date|MSB)<<8) | LSB); //组装为16位
+ 193   1        return date;
+ 194   1      }
+ 195          
+ 196          
+ 197          
+ 198          
+ 199          
+ 200          
+ 201          
+ 202          
+ 203          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    383    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      13
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

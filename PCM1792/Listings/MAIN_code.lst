@@ -1,0 +1,82 @@
+C51 COMPILER V9.59.0.0   MAIN_CODE                                                         10/04/2020 15:10:49 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE MAIN_CODE
+OBJECT MODULE PLACED IN .\Objects\MAIN_code.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE MAIN_code.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\PCM1792;.\UART;.\IIC;.\DE
+                    -LAY) DEBUG OBJECTEXTEND PRINT(.\Listings\MAIN_code.lst) TABS(2) OBJECT(.\Objects\MAIN_code.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          #include "define.h"
+   3          #include "UART.h"
+   4          #include "DELAY.h"
+   5          #include "IIC.h"
+   6          
+   7          //临时变量
+   8          uchar i;
+   9          char  temp;
+  10          
+  11          //串口接收缓冲区
+  12          extern uchar UART_Buf[4];
+  13          
+  14          //主函数
+  15          void main(void)
+  16          {
+  17   1      //初始化阶段
+  18   1        UART_Init();     //初始化串口
+  19   1        UART_Info();     //显示串口信息
+  20   1        IIC_BUS_Init();  //初始化I^2C总线
+  21   1        IIC_Info();      //显示I^2C总线状态
+  22   1        Command_Format();//显示命令格式
+  23   1        Error_Code();    //显示错误码
+  24   1        PCM1792_REG_STATUS();//显示PCM1792寄存器文件状态
+  25   1        delayms(20);     //防止出现“未定义指令”    
+  26   1        RI=0;            //同上，清除RI标志位    
+  27   1        
+  28   1      //串口用户界面
+  29   1        while(1)
+  30   1        {
+  31   2          i=Wait_CMD();              //从串口获取命令
+  32   2          if(i==0)                   //写寄存器命令就绪
+  33   2          {
+  34   3            temp=IIC_BUS_WrtiePCM1792Reg(UART_Buf[1], UART_Buf[2], UART_Buf[3]);//写寄存器
+  35   3            if(temp==WRITE_ERR)      //该寄存器无法写入
+  36   3            {
+  37   4              SEND_String("Reg Is Not Able To Write!(0x01)");
+  38   4              SEND_NewLine();        //换行
+  39   4            }
+  40   3            else if(temp==0)         //写入成功，进行读取
+  41   3            {
+  42   4              PCM1792_REG_STATUS();  //显示PCM1792寄存器文件状态       
+  43   4            }
+  44   3          }
+  45   2          else if(i==1)              //读寄存器命令就绪
+  46   2          {
+  47   3            PCM1792_REG_STATUS();    //显示PCM1792寄存器文件状态
+  48   3          }
+  49   2          else if(i==2)              //未定义的命令
+  50   2          {
+  51   3            SEND_String("Undefined Command!(0x02)");
+  52   3            SEND_NewLine();          //换行
+  53   3          }
+  54   2        }
+C51 COMPILER V9.59.0.0   MAIN_CODE                                                         10/04/2020 15:10:49 PAGE 2   
+
+  55   1      }
+  56          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    116    ----
+   CONSTANT SIZE    =     57    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      2    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

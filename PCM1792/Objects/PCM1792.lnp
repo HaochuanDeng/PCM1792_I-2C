@@ -1,0 +1,6 @@
+".\Objects\MAIN_code.obj",
+".\Objects\UART.obj",
+".\Objects\IIC.obj",
+".\Objects\DELAY.obj" 
+TO ".\Objects\PCM1792" 
+PRINT(".\Listings\PCM1792.m51") RAMSIZE(256) 

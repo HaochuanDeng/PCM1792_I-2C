@@ -1,0 +1,365 @@
+C51 COMPILER V9.59.0.0   UART                                                              10/04/2020 15:10:49 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE UART
+OBJECT MODULE PLACED IN .\Objects\UART.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE UART\UART.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\PCM1792;.\UART;.\IIC;.\DE
+                    -LAY) DEBUG OBJECTEXTEND PRINT(.\Listings\UART.lst) TABS(2) OBJECT(.\Objects\UART.obj)
+
+line level    source
+
+   1          #include "UART.h"
+   2          
+   3          //临时变量
+   4          uint x=0x0000;
+   5          uchar z;
+   6          
+   7          //串口接收缓冲区
+   8          uchar UART_Buf[4]={0xFF,0xFF,0xFF,0xFF};
+   9          
+  10          //PCM1792寄存器文件状态
+  11          uchar code  MAP_0[]="|------------------------------------------PCM1792 REG STATUS------------------------
+             --------------------|";
+  12          uchar code  MAP_1[]="|-INFO-||----------------------MSB---------------------||----------------------LSB---
+             --------------------|";
+  13          uchar code  MAP_2[]="Addr DEC|B15   B14   B13   B12 | B11   B10    B9    B8 |  B7    B6    B5    B4 |  B3 
+             -   B2    B1    B0  |";
+  14          uchar code  MAP_3[]="--------|----------------------|-----------------------|-----------------------|-----
+             --------------------|";
+  15          uchar code  MAP_4[]="0x10 16 |R/W----0-----0-----1--|--0-----0-----0-----0--|-ATL7  ATL6  ATL5  ATL4| ATL3
+             -  ATL2  ATL1  ATL0 |";
+  16          uchar code  MAP_5[]="0x11 17 |R/W----0-----0-----1--|--0-----0-----0-----1--|-ATR7  ATR6  ATR5  ATR4| ATR3
+             -  ATR2  ATR1  ATR0 |";
+  17          uchar code  MAP_6[]="0x12 18 |R/W----0-----0-----1--|--0-----0-----1-----0--|-ATLD  FMT2  FMT1  FMT0| DMF1
+             -  DMF0  DME   MUTE |";
+  18          uchar code  MAP_7[]="0x13 19 |R/W----0-----0-----1--|--0-----0-----1-----1--|-REV   ATS1  ATS0  OPE | RSV 
+             -  DFMS  FLT   INZD |";
+  19          uchar code  MAP_8[]="0x14 20 |R/W----0-----0-----1--|--0-----1-----0-----0--|-RSV   SRST  DSD   DFTH| MONO
+             -  CHSL  OS1   OS0  |";
+  20          uchar code  MAP_9[]="0x15 21 |R/W----0-----0-----1--|--0-----1-----0-----1--|-RSV   RSV   RSV   RSV | RSV 
+             -  DZ1   DZ0   PCMZ |";
+  21          uchar code MAP_10[]="0x16 22 | R-----0-----0-----1--|--0-----1-----1-----0--|-RSV   RSV   RSV   RSV | RSV 
+             -  RSV   ZFGR  ZFGL |";
+  22          uchar code MAP_11[]="0x17 23 | R-----0-----0-----1--|--0-----1-----1-----1--|-RSV   RSV   RSV   ID4 | ID3 
+             -  ID2   ID1   ID0  |";
+  23          uchar code MAP_12[]="|------------------------------------------------------------------------------------
+             --------------------|";
+  24          
+  25          //命令格式
+  26          uchar code CMD_0[]="Write Command Format: W Addr MSB LSB";
+  27          uchar code CMD_1[]="Example:              0  11   11  AA";
+  28          uchar code CMD_2[]="Means: Write 0x11AA At 0x11";
+  29          uchar code CMD_3[]="---------------------------------------------";
+  30          uchar code CMD_4[]="Read Command Format:  R";
+  31          uchar code CMD_5[]="Example:              1";
+  32          uchar code CMD_6[]="Means: Read Whole Regs";
+  33          uchar code CMD_7[]="---------------------------------------------";
+  34          
+  35          //错误码
+  36          uchar code ERR_0[]="CODE DESCRIPTION";
+  37          uchar code ERR_1[]="0x01 Reg Can't Be Written";
+  38          uchar code ERR_2[]="0x02 Undefined Command";
+  39          uchar code ERR_3[]="---------------------------------------------";
+  40          
+  41          //初始化UART为方式0，并配置中断
+C51 COMPILER V9.59.0.0   UART                                                              10/04/2020 15:10:49 PAGE 2   
+
+  42          void UART_Init(void)
+  43          {
+  44   1        TMOD=0x20; //T1方式二，8位自动重装定时器
+  45   1        TH1 =0xFD; //T1做波特率发生器，9600bps
+  46   1        TL1 =0xFD; //同上
+  47   1        TR1 =1;    //开启T1
+  48   1        REN= 1;    //允许串口接收
+  49   1        SM0= 0;    //串口方式一
+  50   1        SM1= 1;    //同上
+  51   1      }
+  52          
+  53          //显示串口信息
+  54          void UART_Info(void)
+  55          {
+  56   1        SEND_String("UART ONLINE @ 9600_bps|CRC_None|DATA_8|STOP_1");
+  57   1        SEND_NewLine();  //换行
+  58   1      }
+  59          
+  60          //显示I^2C总线状态
+  61          void IIC_Info(void)
+  62          {
+  63   1        SEND_String("I^2C BUS Init Successfully!");
+  64   1        SEND_NewLine();  //换行
+  65   1        SEND_String("---------------------------------------------");
+  66   1        SEND_NewLine();  //换行
+  67   1      }
+  68          
+  69          //显示PCM1792寄存器文件状态
+  70          void PCM1792_REG_STATUS(void)
+  71          {
+  72   1        SEND_String(MAP_0);
+  73   1        SEND_NewLine();
+  74   1        delayms(20);
+  75   1        
+  76   1        SEND_String(MAP_1);
+  77   1        SEND_NewLine();
+  78   1        delayms(20);
+  79   1        
+  80   1        SEND_String(MAP_2);
+  81   1        SEND_NewLine();
+  82   1        delayms(20);
+  83   1        
+  84   1        SEND_String(MAP_3);
+  85   1        SEND_NewLine();
+  86   1        delayms(20);
+  87   1        
+  88   1        SEND_String(MAP_4);
+  89   1        SEND_NewLine();
+  90   1        x=IIC_BUS_ReadPCM1792Reg(0x10);
+  91   1        SEND_String("          ");
+  92   1        for(z=0; z<16; z++)
+  93   1        {
+  94   2          SEND_String((x&0x8000)? "1" : "0");
+  95   2          x = x<<1;
+  96   2          SEND_String("     ");
+  97   2        }
+  98   1        SEND_NewLine();
+  99   1        delayms(20);
+ 100   1        
+ 101   1        SEND_String(MAP_5);
+ 102   1        SEND_NewLine();
+ 103   1        x=IIC_BUS_ReadPCM1792Reg(0x11);
+C51 COMPILER V9.59.0.0   UART                                                              10/04/2020 15:10:49 PAGE 3   
+
+ 104   1        SEND_String("          ");
+ 105   1        for(z=0; z<16; z++)
+ 106   1        {
+ 107   2          SEND_String((x&0x8000)? "1" : "0");
+ 108   2          x = x<<1;
+ 109   2          SEND_String("     ");
+ 110   2        }
+ 111   1        SEND_NewLine();
+ 112   1        delayms(20);
+ 113   1        
+ 114   1        SEND_String(MAP_6);
+ 115   1        SEND_NewLine();
+ 116   1        x=IIC_BUS_ReadPCM1792Reg(0x12);
+ 117   1        SEND_String("          ");
+ 118   1        for(z=0; z<16; z++)
+ 119   1        {
+ 120   2          SEND_String((x&0x8000)? "1" : "0");
+ 121   2          x = x<<1;
+ 122   2          SEND_String("     ");
+ 123   2        }
+ 124   1        SEND_NewLine();
+ 125   1        delayms(20);
+ 126   1        
+ 127   1        SEND_String(MAP_7);
+ 128   1        SEND_NewLine();
+ 129   1        x=IIC_BUS_ReadPCM1792Reg(0x13);
+ 130   1        SEND_String("          ");
+ 131   1        for(z=0; z<16; z++)
+ 132   1        {
+ 133   2          SEND_String((x&0x8000)? "1" : "0");
+ 134   2          x = x<<1;
+ 135   2          SEND_String("     ");
+ 136   2        }
+ 137   1        SEND_NewLine();
+ 138   1        delayms(20);
+ 139   1        
+ 140   1        SEND_String(MAP_8);
+ 141   1        SEND_NewLine();
+ 142   1        x=IIC_BUS_ReadPCM1792Reg(0x14);
+ 143   1        SEND_String("          ");
+ 144   1        for(z=0; z<16; z++)
+ 145   1        {
+ 146   2          SEND_String((x&0x8000)? "1" : "0");
+ 147   2          x = x<<1;
+ 148   2          SEND_String("     ");
+ 149   2        }
+ 150   1        SEND_NewLine();
+ 151   1        delayms(20);
+ 152   1        
+ 153   1        SEND_String(MAP_9);
+ 154   1        SEND_NewLine();
+ 155   1        x=IIC_BUS_ReadPCM1792Reg(0x15);
+ 156   1        SEND_String("          ");
+ 157   1        for(z=0; z<16; z++)
+ 158   1        {
+ 159   2          SEND_String((x&0x8000)? "1" : "0");
+ 160   2          x = x<<1;
+ 161   2          SEND_String("     ");
+ 162   2        }
+ 163   1        SEND_NewLine();
+ 164   1        delayms(20);
+ 165   1        
+C51 COMPILER V9.59.0.0   UART                                                              10/04/2020 15:10:49 PAGE 4   
+
+ 166   1        SEND_String(MAP_10);
+ 167   1        SEND_NewLine();
+ 168   1        x=IIC_BUS_ReadPCM1792Reg(0x16);
+ 169   1        SEND_String("          ");
+ 170   1        for(z=0; z<16; z++)
+ 171   1        {
+ 172   2          SEND_String((x&0x8000)? "1" : "0");
+ 173   2          x = x<<1;
+ 174   2          SEND_String("     ");
+ 175   2        }
+ 176   1        SEND_NewLine();
+ 177   1        delayms(20);
+ 178   1        
+ 179   1        SEND_String(MAP_11);
+ 180   1        SEND_NewLine();
+ 181   1        x=IIC_BUS_ReadPCM1792Reg(0x17);
+ 182   1        SEND_String("          ");
+ 183   1        for(z=0; z<16; z++)
+ 184   1        {
+ 185   2          SEND_String((x&0x8000)? "1" : "0");
+ 186   2          x = x<<1;
+ 187   2          SEND_String("     ");
+ 188   2        }
+ 189   1        SEND_NewLine();
+ 190   1        delayms(20);
+ 191   1        
+ 192   1        SEND_String(MAP_12);
+ 193   1        SEND_NewLine();
+ 194   1        delayms(20);
+ 195   1      }
+ 196          
+ 197          //展示错误码
+ 198          void Error_Code(void)
+ 199          {
+ 200   1        SEND_String(ERR_0);
+ 201   1        SEND_NewLine();
+ 202   1        delayms(20);
+ 203   1        
+ 204   1        SEND_String(ERR_1);
+ 205   1        SEND_NewLine();
+ 206   1        delayms(20);
+ 207   1        
+ 208   1        SEND_String(ERR_2);
+ 209   1        SEND_NewLine();
+ 210   1        delayms(20);
+ 211   1        
+ 212   1        SEND_String(ERR_3);
+ 213   1        SEND_NewLine();
+ 214   1        delayms(20);
+ 215   1      }
+ 216          
+ 217          //展示命令格式
+ 218          void Command_Format(void)
+ 219          {
+ 220   1        SEND_String(CMD_0);
+ 221   1        SEND_NewLine();
+ 222   1        delayms(20);
+ 223   1        
+ 224   1        SEND_String(CMD_1);
+ 225   1        SEND_NewLine();
+ 226   1        delayms(20);
+ 227   1        
+C51 COMPILER V9.59.0.0   UART                                                              10/04/2020 15:10:49 PAGE 5   
+
+ 228   1        SEND_String(CMD_2);
+ 229   1        SEND_NewLine();
+ 230   1        delayms(20);
+ 231   1        
+ 232   1        SEND_String(CMD_3);
+ 233   1        SEND_NewLine();
+ 234   1        delayms(20);
+ 235   1        
+ 236   1        SEND_String(CMD_4);
+ 237   1        SEND_NewLine();
+ 238   1        delayms(20);
+ 239   1        
+ 240   1        SEND_String(CMD_5);
+ 241   1        SEND_NewLine();
+ 242   1        delayms(20);
+ 243   1        
+ 244   1        SEND_String(CMD_6);
+ 245   1        SEND_NewLine();
+ 246   1        delayms(20);
+ 247   1        
+ 248   1        SEND_String(CMD_7);
+ 249   1        SEND_NewLine();
+ 250   1        delayms(20);
+ 251   1      }
+ 252          
+ 253          //发送一个字节
+ 254          void SEND_Byte(uchar byte)
+ 255          {
+ 256   1        SBUF = byte;
+ 257   1        while(!TI); //等待发送完毕
+ 258   1        TI = 0;     //TI清零
+ 259   1      }
+ 260          
+ 261          //接收一个字节
+ 262          uchar Receive_Byte(void)
+ 263          {
+ 264   1        uchar i;
+ 265   1        
+ 266   1        while(!RI);//等待接受到字节
+ 267   1        RI=0;      //RI清零
+ 268   1        i=SBUF;    //获取接收到的数据
+ 269   1        
+ 270   1        return i;
+ 271   1      }
+ 272          
+ 273          //发送字符串
+ 274          void SEND_String(uchar *p)
+ 275          {
+ 276   1        while(*p != '\0')
+ 277   1        {
+ 278   2          SEND_Byte(*p);
+ 279   2          p++;
+ 280   2        }
+ 281   1      }
+ 282          
+ 283          //发送换行符
+ 284          void SEND_NewLine(void)
+ 285          {
+ 286   1        SEND_Byte(0x0A);//0x0A代表"\n"
+ 287   1      }
+ 288          
+ 289          ////发送空格
+C51 COMPILER V9.59.0.0   UART                                                              10/04/2020 15:10:49 PAGE 6   
+
+ 290          //void SEND_SP(void)
+ 291          //{
+ 292          //  SEND_Byte(0x20);//0x20代表" "
+ 293          //}
+ 294          
+ 295          //等待命令
+ 296          //返回 0 写命令就绪
+ 297          //     1 读命令就绪
+ 298          //     2 未定义命令
+ 299          uchar Wait_CMD(void)
+ 300          {
+ 301   1        uchar i;
+ 302   1        
+ 303   1        UART_Buf[0]=Receive_Byte();    //接收第一个字节
+ 304   1        if(UART_Buf[0]==0x00)          //写命令
+ 305   1        {
+ 306   2          for(i=1;i<4;i++)
+ 307   2          {
+ 308   3            UART_Buf[i]=Receive_Byte();//接收剩余三个字节
+ 309   3          }
+ 310   2          return 0;
+ 311   2        }
+ 312   1        else if(UART_Buf[0]==0x01)     //读命令
+ 313   1        {
+ 314   2          return 1;
+ 315   2        }
+ 316   1        
+ 317   1        return 2;                      //未定义指令
+ 318   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1132    ----
+   CONSTANT SIZE    =   1896    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      7    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

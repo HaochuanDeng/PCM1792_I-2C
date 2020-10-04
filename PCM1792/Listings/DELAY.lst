@@ -1,0 +1,46 @@
+C51 COMPILER V9.59.0.0   DELAY                                                             10/04/2020 15:10:50 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE DELAY
+OBJECT MODULE PLACED IN .\Objects\DELAY.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE DELAY\DELAY.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\PCM1792;.\UART;.\IIC;.\
+                    -DELAY) DEBUG OBJECTEXTEND PRINT(.\Listings\DELAY.lst) TABS(2) OBJECT(.\Objects\DELAY.obj)
+
+line level    source
+
+   1          #include "DELAY.h"
+   2          
+   3          /*********************************
+   4          ms延时函数,11.0592MHz下,1ms
+   5          *********************************/
+   6          void delayms(uint ms)
+   7          {
+   8   1        uint j,k;
+   9   1        
+  10   1        for(j = ms;j > 0;j--)
+  11   1        {
+  12   2          for(k = 110;k > 0;k--)
+  13   2          {
+  14   3          }
+  15   2        }
+  16   1      }
+  17          
+  18          /*********************************
+  19          IIC延时函数,11.0592MHz下,大概4~~5us
+  20          *********************************/
+  21          void delay(void)
+  22          {;;}
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     31    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
